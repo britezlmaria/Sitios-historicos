@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Panel – Sitios Históricos{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous"/>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    {% block head %}{% endblock %}
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+    body {
+        font-family: 'Poppins', sans-serif;
+    }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<!-- ===== NAVBAR SUPERIOR ===== -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <!-- Logo -->
+        <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">
+            <i class="fas fa-landmark"></i> Sitios Históricos
+        </a>
+
+        <!-- Botón hamburguesa (móvil) -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarContent" aria-controls="navbarContent"
+                aria-expanded="false" aria-label="Menú">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Contenido del navbar -->
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <!-- Links de navegación -->
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                {% if user and user.role.name in ["Administrador", "Editor"] %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('historic_site_bp.list') }}">
+                        Gestión de sitios históricos
+                    </a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('reviews_bp.list_reviews') }}">
+                        Moderación de reseñas
+                    </a>
+                </li>
+                {% endif %}
+                {% if user and user.role.name == "Administrador" %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('user_bp.list') }}">
+                            Gestión de usuarios
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if user and user.system_admin %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('feature_flags.panel') }}">
+                        Panel de funcionalidades
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+
+            <!-- Usuario -->
+            <ul class="navbar-nav mb-2 mb-lg-0">
+                {% if user %}
+                    <!-- Dropdown usuario -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown"
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ user.name }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="#profile">Perfil</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('auth_bp.logout') }}">Cerrar sesión</a>
+                            </li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <!-- Botón de login -->
+                    <li class="nav-item">
+                        <a class="btn btn-outline-light ms-2" href="{{ url_for('auth_bp.login') }}">
+                            Iniciar sesión
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ===== CONTENIDO PRINCIPAL ===== -->
+<main class="flex-grow-1 container my-4">
+    {% block content %}
+    {% endblock %}
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="bg-dark text-light text-center py-3 mt-auto">
+    &copy; 2025 Sitios Históricos
+</footer>
+
+<!-- ===== modal de confirmacion ===== -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title">Confirmar acción</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">¿Estás seguro de realizar esta acción?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="confirmForm" method="post">
+          <button type="submit" class="btn btn-danger">Confirmar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                Swal.fire({
+                    icon: "{{ category }}",
+                    title: "{% if category == 'success' %}✅ Operación realizada con éxito{% elif category == 'error' %}❌ Ocurrió un error{% elif category == 'warning' %}⚠️ Atención{% else %}ℹ️ Información{% endif %}",
+                    text: "{{ message }}",
+                    confirmButtonText: "OK",
+                    timer: 3500,
+                    timerProgressBar: true,
+                });
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</script>
+
+<!-- script del modal -->
+<script>
+  const confirmModal = document.getElementById('confirmModal');
+  confirmModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const action = button.getAttribute('data-action');
+    const message = button.getAttribute('data-message');
+
+    const form = confirmModal.querySelector('#confirmForm');
+    const messageBox = confirmModal.querySelector('#confirmMessage');
+
+    form.action = action;
+    messageBox.textContent = message;
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.querySelector('#fecha_rango, #date_range_modification');
+    if (sel && window.flatpickr) {
+      flatpickr.localize(flatpickr.l10ns.es);
+      flatpickr(sel, { mode: 'range', dateFormat: 'Y-m-d' });
+    }
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
+
+
+

@@ -1,0 +1,156 @@
+{% extends "layout.html" %}
+
+{% block title %}Feature Flags{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Panel de funcionalidades</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Mensaje (para modos mantenimiento)</th>
+                    <th>Última modificación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for flag in flags %}
+                <tr>
+                    <td>{{ flag.name }}</td>
+                    <td>{{ flag.description }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if flag.enabled else 'danger' }}">
+                            {{ 'ON' if flag.enabled else 'OFF' }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if '_maintenance_mode' in flag.name %}
+                            {% if flag.enabled and flag.maintenance_message %}
+                                <small class="text-muted">{{ flag.maintenance_message }}</small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">No aplica</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if flag.modified_at %}
+                            {{ flag.modified_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% if flag.modified_by %}por {{ flag.modified_by }}{% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if '_maintenance_mode' in flag.name %}
+                            <button type="button" 
+                                    class="btn btn-sm btn-{{ 'danger' if flag.enabled else 'success' }}"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#maintenanceModal{{ flag.id }}">
+                                {{ 'Desactivar' if flag.enabled else 'Activar' }}
+                            </button>
+                        {% else %}
+                            <form action="{{ url_for('feature_flags.update', flag_id=flag.id) }}" method="POST" 
+                                  onsubmit="return confirm('¿Estás seguro de {{ 'desactivar' if flag.enabled else 'activar' }} esta funcionalidad?')">
+                                <input type="hidden" name="enabled" value="{{ 'on' if not flag.enabled else 'off' }}">
+                                <button type="submit" class="btn btn-sm btn-{{ 'danger' if flag.enabled else 'success' }}">
+                                    {{ 'Desactivar' if flag.enabled else 'Activar' }}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% for flag in flags %}
+    {% if '_maintenance_mode' in flag.name %}
+    <div class="modal fade" id="maintenanceModal{{ flag.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('feature_flags.update', flag_id=flag.id) }}" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            {{ 'Desactivar' if flag.enabled else 'Activar' }} {{ flag.name }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% if flag.enabled %}
+                            <!-- Desactivar mantenimiento -->
+                            <div class="alert alert-warning">
+                                <strong>¿Estás seguro de desactivar el modo mantenimiento?</strong>
+                                <br>Los usuarios volverán a tener acceso a todas las funcionalidades.
+                            </div>
+                            <input type="hidden" name="enabled" value="off">
+                            <input type="hidden" name="maintenance_message" value="">
+                        {% else %}
+                            <!-- Activar mantenimiento -->
+                            <div class="alert alert-danger">
+                                <strong>¡Atención!</strong> Al activar el modo mantenimiento, los usuarios no podrán acceder a las funcionalidades administrativas.
+                            </div>
+                            <input type="hidden" name="enabled" value="on">
+                            <div class="mb-3">
+                                <label for="maintenance_message{{ flag.id }}" class="form-label">
+                                    <strong>Mensaje de mantenimiento *</strong>
+                                </label>
+                                <textarea class="form-control" 
+                                         id="maintenance_message{{ flag.id }}" 
+                                         name="maintenance_message" 
+                                         rows="3" 
+                                         maxlength="256" 
+                                         placeholder="Ingrese el mensaje que verán los usuarios durante el mantenimiento..."
+                                         required></textarea>
+                                <div class="form-text">Máximo 256 caracteres. Este mensaje es obligatorio.</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-{{ 'success' if flag.enabled else 'danger' }}">
+                            Confirmar {{ 'Desactivación' if flag.enabled else 'Activación' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+<script>
+// Validación adicional
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form[action*="update"]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const messageField = form.querySelector('textarea[name="maintenance_message"]');
+            if (messageField && messageField.hasAttribute('required')) {
+                if (!messageField.value.trim()) {
+                    e.preventDefault();
+                    alert('El mensaje de mantenimiento es obligatorio.');
+                    messageField.focus();
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

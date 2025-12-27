@@ -1,0 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+
+@import './base.css';
+
+
+:root {
+  --color-fondo: #3a3f70;         
+  --color-primario: #191446;      
+  --color-secundario: #2D5A50;     
+  --color-acento: #707070;         
+  --color-acento-claro: #ccba73;   
+  --color-acento-suave: #FFF4D1;   
+  --color-tarjeta: #FFFFFF;
+  --color-texto: #1E1E1E;          
+  --color-mutado: #64748B;        
+  --color-estrella: #E6B800;
+  --color-borde-suave: #E2E8F0;
+  --color-nav-link: #ffffff;
+  --color-encabezados: #ffffff;
+  --color-btn-primary: #ffffff;
+  --color-box-shadow:#d4d4d4;
+}
+
+
+body {
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: 'Nunito', sans-serif;
+  display: block;
+  place-items: center;
+}
+
+
+h1, h4, h6 {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  color: var(--color-encabezados);
+}
+
+h2,h3, h5 {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-weight: normal;
+}
+
+
+a {
+  text-decoration: none;
+  color: var(--color-primario);
+  transition: 0.4s;
+  padding: 3px;
+}
+@media (hover: hover) {
+  a:hover {
+    background-color: rgba(109, 76, 65, 0.1); 
+  }
+}
+
+@media (min-width: 1024px) {
+  #app {
+    display: block;
+    padding: 2rem;
+  }
+}
+
+
+.navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 76px;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-primario);
+  border-bottom: 4px solid var(--color-acento-claro); 
+  box-shadow: 0 4px 20px rgba(26, 60, 52, 0.15);
+  z-index: 999;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 2px solid var(--color-acento);
+  padding: 4px;
+  background: white;
+}
+
+nav {
+  display: flex;
+  gap: 20px;               /* ← ESTE ES EL TRUCO: separación generosa entre links */
+}
+
+nav a {
+  color: #FFFFFF !important;
+  font-weight: 600;
+  font-size: 16px;
+  padding: 8px 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+nav a:hover {
+  color: var(--color-acento) !important;
+}
+
+nav a.router-link-exact-active {
+  color: var(--color-nav-link) !important;
+  font-weight: 700;
+}
+
+nav a.router-link-exact-active::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0; right: 0;
+  height: 4px;
+  background: var(--color-acento-claro);
+  border-radius: 2px;
+}
+
+.btn-primary {
+  background: var(--color-acento);
+  color: var(--color-btn-primary);
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: var(--color-acento-claro);
+  transform: translateY(-3px);
+  color: #000000;
+}
+
+.card {
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+}
+
+.star-rating {
+  color: var(--color-estrella);
+  filter: drop-shadow(0 1px 2px rgba(230,184,0,0.4));
+}
+
+.card-body .text-muted {
+  color: var(--color-mutado) !important;
+}
+
+.btn-outline-primary {
+  color: var(--color-acento);
+  border-color: var(--color-acento);
+}
+.btn-outline-primary:hover {
+  background-color: #0000;
+  color: #ffffff;
+}
+
+.star-rating {
+  color: var(--color-estrella);
+}

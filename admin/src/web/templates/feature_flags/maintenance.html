@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block title %}Sistema en Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white">
+            <h2>Sistema en Mantenimiento</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-secondary">
+                {% if message %}
+                    {{ message }}
+                {% else %}
+                    El sistema está temporalmente en mantenimiento. Por favor, inténtelo más tarde.
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

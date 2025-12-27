@@ -1,0 +1,75 @@
+[project]
+name = "web"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Maria Luisa Britez",email = "britezmariaa1@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<4"
+dependencies = [
+    "flask (>=3.1.2,<4.0.0)",
+    "flask-sqlalchemy (>=3.1.1,<4.0.0)",
+    "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "sqlalchemy (>=2.0.43,<3.0.0)",
+    "pytest (>=8.4.2,<9.0.0)",
+    "flask-sqlalchemy-lite (>=0.1.0,<0.2.0)",
+    "flask-session (>=0.8.0,<0.9.0)",
+    "geoalchemy2 (>=0.18.0,<0.19.0)",
+    "shapely (>=2.1.2,<3.0.0)",
+    "flask-bcrypt (>=1.0.1,<2.0.0)",
+    "flask-jwt-extended (>=4.7.1,<5.0.0)",
+    "marshmallow (>=4.1.0,<5.0.0)",
+    "minio (>=7.2.18,<8.0.0)",
+    "oauthlib (>=3.3.1,<4.0.0)",
+    "requests (>=2.32.5,<3.0.0)",
+    "requests-oauthlib (>=2.0.0,<3.0.0)",
+    "flask-cors (>=6.0.1,<7.0.0)",
+    "google-auth-oauthlib (>=1.2.3,<2.0.0)",
+    "google-auth (>=2.15.0,<2.42.0)",
+    "python-dotenv (>=1.2.1,<2.0.0)",
+]
+
+[tool.poetry]
+packages = [{include = "web", from = "src"}]
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.4.2"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.9.0"
+ruff = "^0.14.0"
+isort = "^6.1.0"
+pre-commit = "^4.3.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+extend-exclude = '''
+(
+  (^|/)\__pycache__(/|$)|
+  (^|/)flask_session(/|$)|
+  (^|/)migrations(/|$)
+)
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-exclude = ["__pycache__", "flask_session", "migrations"]
+
+[tool.ruff.lint]
+# E/W/F: pycodestyle/pyflakes; I: isort; UP: pyupgrade; B: bugbear
+select = ["E", "W", "F", "I", "UP", "B"]
+# Ojo: Ruff 0.14.0 no conoce W503. Ignoramos E203 (compat. Black) y E501 (líneas largas en docstrings).
+ignore = ["E203", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "web"]
+combine-as-imports = true

@@ -1,0 +1,86 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="h4 mb-4">Crear Usuario</h1>
+
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('user_bp.create') }}" novalidate>
+
+    <div class="col-sm-12 col-md-6 mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" id="email" name="email" class="form-control"
+             value="{{ form.email if form else '' }}" required>
+      {% if errors and errors.get("email") %}
+        <div class="text-danger small">{{ errors.get("email") }}</div>
+      {% endif %}
+    </div>
+
+    <div class="col-sm-12 col-md-6 mb-3">
+      <label for="nombre" class="form-label">Nombre</label>
+      <input type="text" id="nombre" name="name" class="form-control"
+             value="{{ form.name if form else '' }}" 
+             required pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+" 
+             title="Solo letras y espacios permitidos">
+      {% if errors and errors.get("name") %}
+        <div class="text-danger small">{{ errors.get("name") }}</div>
+      {% endif %}
+    </div>
+
+    <div class="col-sm-12 col-md-6 mb-3">
+      <label for="apellido" class="form-label">Apellido</label>
+      <input type="text" id="apellido" name="last_name" class="form-control"
+             value="{{ form.last_name if form else '' }}" 
+             required pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+" 
+             title="Solo letras y espacios permitidos">
+      {% if errors and errors.get("last_name") %}
+        <div class="text-danger small">{{ errors.get("last_name") }}</div>
+      {% endif %}
+    </div>
+
+    <div class="col-sm-12 col-md-6 mb-3">
+      <label for="password" class="form-label">Contraseña</label>
+      <input type="password" id="password" name="password" 
+             class="form-control" required minlength="6"
+             placeholder="Mínimo 6 caracteres">
+      {% if errors and errors.get("password") %}
+        <div class="text-danger small">{{ errors.get("password") }}</div>
+      {% endif %}
+    </div>
+
+
+    <div class="col-sm-12 col-md-6 mb-3">
+      <label for="enabled" class="form-label">Activo</label>
+      <select name="enabled" id="enabled" class="form-select">
+        <option value="SI" {% if form and form.enabled %}selected{% endif %}>SI</option>
+        <option value="NO" {% if form and not form.enabled %}selected{% endif %}>NO</option>
+      </select>
+      {% if errors and errors.get("enabled") %}
+        <div class="text-danger small">{{ errors.get("enabled") }}</div>
+      {% endif %}
+    </div>
+
+     <div class="col-sm-12 col-md-6 mb-3">
+      <label for="id_role" class="form-label">Rol</label>
+      <select name="id_role" id="id_role" class="form-select">
+        {% for role in roles %}
+          <option value="{{ role.id_role }}"
+            {% if form and form.id_role == role.id_role %}selected{% endif %}>
+            {{ role.name }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if errors and errors.get("id_role") %}
+        <div class="text-danger small">{{ errors.get("id_role") }}</div>
+      {% endif %}
+    </div>
+
+    <div class="col-12 d-flex flex-column flex-sm-row gap-2">
+      <button type="submit" class="btn btn-success">Crear</button>
+      <a href="{{ url_for('user_bp.list') }}" class="btn btn-secondary">Volver al listado</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

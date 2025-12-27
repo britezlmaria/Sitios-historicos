@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% block title %}Home - Sitios Historicos{% endblock %}
+
+{% block content %}
+    <h2 class="display-3">Bienvenido {{user.name}}</h2>
+    <p class="lead">Este es el sitio de administracion de Sitios Historicos</p>
+    {% if not user %}
+        <p class="lead"><a href="{{ url_for('auth_bp.login') }}">Inicia sesión</a> para acceder a todas las funcionalidades</p>
+    {% endif %}
+{% endblock %}

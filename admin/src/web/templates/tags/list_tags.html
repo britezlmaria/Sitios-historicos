@@ -1,0 +1,186 @@
+{% extends 'layout.html' %}
+
+{% block title %}Tags – Sitios Históricos{% endblock %}
+
+{% block content %}
+<div class="container my-4 text-center">
+
+    <h2 class="mb-3">Etiquetas</h2>
+    <!-- botón crear tag -->
+    <a href="{{ url_for('tags_bp.create') }}" class="btn btn-primary create-btn mb-3">+ Crear nueva etiqueta</a>
+
+     <!-- filtros -->
+    <form method="get" action="{{ url_for('tags_bp.list_tags') }}" class="d-flex justify-content-center gap-2 mb-3">
+        <input type="text" name="search" placeholder="Buscar etiqueta..." class="form-control w-25" value="{{ search }}">
+        <select name="order" class="form-select w-auto orden-btn">
+            <option value="alfabetico" {% if order=='alfabetico' %}selected{% endif %}>A-Z</option>
+            <option value="inverso" {% if order=='inverso' %}selected{% endif %}>Z-A</option>
+            <option value="recientes" {% if order=='recientes' %}selected{% endif %}>Más recientes</option>
+            <option value="antiguos" {% if order=='antiguos' %}selected{% endif %}>Más antiguos</option>
+        </select>
+        <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+    </form>
+    {% if tags %}
+        <p class="muted text">Seleccione una etiqueta para actualizarla o eliminarla</p>
+    {% endif %}
+    {% if error %}
+    <div class="d-flex justify-content-center mt-2">
+        <div class="alert alert-danger w-50  py-2 px-3 text-center" role="alert">
+            {{ error }}
+        </div>
+    </div>
+    {% endif %}
+    <!-- tags -->
+    <div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
+        {% for tag in tags %}
+            <span class="badge badge-custom bg-secondary tag-badge" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#tagModal" 
+                  data-tag-name="{{ tag.name }}"
+                  data-tag-id="{{ tag.id }}"
+                  style="cursor:pointer;">
+                {{ tag.name }}
+            </span>
+        {% else %}
+            <p class="text-muted">No se encontraron etiquetas.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Modal para acciones sobre el tag -->
+    <div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="tagModalLabel">Opciones de etiqueta</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p id="modalTagName"></p>
+            <p>¿Qué acción deseas realizar?</p>
+          </div>
+          <div class="modal-footer">
+            <a id="updateTagBtn" href="#" class="btn btn-primary">Actualizar</a>
+            <form id="deleteTagForm" method="POST" action="" style="display:inline;">
+                <button type="submit" class="btn btn-danger" id="deleteTagBtn">Eliminar</button>
+            </form>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de confirmación para eliminar etiqueta -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            ¿Estás seguro que deseas eliminar la etiqueta <span id="deleteTagName" class="fw-bold"></span>?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- paginación -->
+    <nav aria-label="Paginación" class="d-flex justify-content-center mt-3">
+        <ul class="pagination">
+            {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('tags_bp.list_tags', page=page-1, search=search, order=order) }}">Anterior</a>
+                </li>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('tags_bp.list_tags', page=p, search=search, order=order) }}">{{ p }}</a>
+                </li>
+            {% endfor %}
+
+            {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('tags_bp.list_tags', page=page+1, search=search, order=order) }}">Siguiente</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    <a href="{{ url_for('historic_site_bp.list') }}" class="btn btn-primary ms-2">Volver a Sitios Historicos</a>
+</div>
+
+<script>
+    //Menu con el update y delete
+    document.addEventListener('DOMContentLoaded', function() {
+        var tagModal = document.getElementById('tagModal');
+        var confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+        var deleteTagForm = document.getElementById('deleteTagForm');
+        var pendingDelete = { tagName: '', tagId: '' };
+
+        tagModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var tagName = button.getAttribute('data-tag-name');
+            var tagId = button.getAttribute('data-tag-id');
+            document.getElementById('modalTagName').textContent = 'Etiqueta: "' + tagName + '"';
+            document.getElementById('updateTagBtn').href = "{{ url_for('tags_bp.update', id='') }}" + tagId;
+            deleteTagForm.action = '/tags/delete?id=' + tagId;
+            document.getElementById('deleteTagBtn').setAttribute('data-tag-name', tagName);
+            document.getElementById('deleteTagBtn').setAttribute('data-tag-id', tagId);
+        });
+
+        // Confirmación
+        deleteTagForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var tagName = document.getElementById('deleteTagBtn').getAttribute('data-tag-name');
+            var tagId = document.getElementById('deleteTagBtn').getAttribute('data-tag-id');
+            pendingDelete.tagName = tagName;
+            pendingDelete.tagId = tagId;
+            document.getElementById('deleteTagName').textContent = '"' + tagName + '"';
+            confirmDeleteModal.show();
+        });
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            confirmDeleteModal.hide();
+            deleteTagForm.submit();
+        });
+    });
+</script>
+
+<style>
+    .create-btn {
+        background-color: #343a40;
+        color: white;
+        border-color: #000000;
+    }
+    .create-btn:hover {
+        background-color: #000000;
+        color: white;
+        border-color: #000000;
+    }
+    .badge-custom {
+        font-size: 1.25rem;
+        padding: 0.5em 0.75em;
+    }
+    .orden-btn{
+        border-color: #000000;
+        color: #000000;
+    }
+    .orden-btn.activo {
+        background-color: #000000; 
+        color: white;
+    }
+    .pagination .page-item .page-link {
+        color: #000000;
+        border-color: #000000;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #000000;
+        border-color: #000000;
+        color: white;
+    }
+</style>
+
+{% endblock %}

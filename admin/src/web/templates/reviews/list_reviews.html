@@ -1,0 +1,242 @@
+{% extends "layout.html" %}
+
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <style>
+        /* Hacemos que los filtros se vean bien en movil y escritorio */
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        /* En movil, los inputs ocupan todo el ancho. En desktop (md), se ajustan al contenido */
+        .filter-input {
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .filter-input {
+                width: auto;
+                max-width: 200px;
+            }
+            .filter-container {
+                justify-content: flex-start; /* Alineado a la izquierda en escritorio */
+            }
+        }
+
+        /* Estilos para los estados (Badges) */
+        .badge-aprobada { background-color: #198754; color: white; } /* Verde success */
+        .badge-pendiente { background-color: #ffc107; color: black; } /* Amarillo warning */
+        .badge-rechazada { background-color: #dc3545; color: white; } /* Rojo danger */
+    </style>
+{% endblock %}
+
+{% block title %}Reseñas – Sitios Históricos{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+
+    <div class="row align-items-center mb-3">
+        <div class="col-md-8">
+            <h1><i class="fas fa-star text-warning"></i> Gestión de Reseñas</h1>
+        </div>
+        <div class="col-md-4 text-md-end text-muted">
+            <small>Total de reseñas: {{ total_reviews if total_reviews is defined else reviews|length }}</small>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 bg-light">
+        <div class="card-body py-3">
+            <form method="get" action="{{url_for('reviews_bp.list_reviews')}}" class="filter-group filter-container justify-content-center justify-content-md-start">
+
+                <div class="input-group filter-input">
+                    <span class="input-group-text bg-white"><i class="fas fa-user"></i></span>
+                    <input type="text" name="search_user" placeholder="Usuario..." class="form-control" value="{{ search_user }}">
+                </div>
+
+                <select name="site_id" class="form-select filter-input">
+                    <option value="">Todos los sitios</option>
+                    {% for site in sites %}
+                        <option value="{{ site.id }}" {% if site.id|string == site_id %}selected{% endif %}>{{ site.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="state" class="form-select filter-input">
+                    <option value="">Estado...</option>
+                    <option value="aprobada" {% if state=='aprobada' %}selected{% endif %}>✅ Aprobada</option>
+                    <option value="pendiente" {% if state=='pendiente' %}selected{% endif %}>⏳ Pendiente</option>
+                    <option value="rechazada" {% if state=='rechazada' %}selected{% endif %}>❌ Rechazada</option>
+                </select>
+
+                <div class="input-group filter-input">
+                     <span class="input-group-text bg-white"><i class="far fa-calendar-alt"></i></span>
+                    <input type="text" id="fecha_rango" name="fecha_rango" class="form-control"
+                    placeholder="Fechas"
+                    value="{{ date }}">
+                </div>
+
+                <select name="rating" class="form-select filter-input">
+                    <option value="">Calificación...</option>
+                    {% for i in range(5, 0, -1) %}
+                        <option value="{{ i }}" {% if rating|string==i|string %}selected{% endif %}>{{ i }} ⭐</option>
+                    {% endfor %}
+                </select>
+
+                <select name="order" class="form-select filter-input">
+                    <option value="recientes" {% if order=='recientes' %}selected{% endif %}>Más recientes</option>
+                    <option value="antiguos" {% if order=='antiguos' %}selected{% endif %}>Más antiguos</option>
+                    <option value="mejor calificadas" {% if order=='mejor calificadas' %}selected{% endif %}>Mayor puntaje</option>
+                    <option value="peor calificadas" {% if order=='peor calificadas' %}selected{% endif %}>Menor puntaje</option>
+                </select>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+                <a href="{{ url_for('reviews_bp.list_reviews') }}" class="btn btn-outline-secondary" title="Limpiar filtros">
+                    <i class="fas fa-sync-alt"></i>
+                </a>
+            </form>
+        </div>
+    </div>
+
+    {% set colors = {
+        "PENDING":  "warning text-dark",
+        "APPROVED": "success",
+        "REJECTED": "danger"
+    } %}
+
+    {% set labels = {
+        "PENDING": "Pendiente",
+        "APPROVED": "Aprobada",
+        "REJECTED": "Rechazada"
+    } %}
+
+    <div class="row">
+        <div class="col-12">
+            <div class="table-responsive shadow-sm rounded">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Sitio Histórico</th>
+                            <th class="text-center">Calificación</th>
+                            <th>Fecha</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white">
+                        {% for review in reviews %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ review.user.email.split('@')[0] }}</div>
+                                <small class="text-muted">{{ review.user.email }}</small>
+                            </td>
+                            <td>{{ review.historic_site.name }}</td>
+                            <td class="text-center">
+                                <span class="text-warning">
+                                    {% for _ in range(review.rating) %}★{% endfor %}
+                                </span>
+                                <span class="text-muted">
+                                    {% for _ in range(5 - review.rating) %}☆{% endfor %}
+                                </span>
+                            </td>
+                            <td>{{ review.inserted_at.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ colors[review.state.name] }}">
+                                    {{ labels[review.state.name] }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('reviews_bp.view_review', review_id=review.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3"></i><br>
+                                No se encontraron reseñas con los filtros aplicados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% set current_page = page or 1 %}
+    {% set total = total_pages or 1 %}
+
+    {% if total > 1 %}
+    <nav aria-label="Paginación reseñas" class="mt-4">
+      <ul class="pagination justify-content-center">
+        <li class="page-item {% if current_page <= 1 %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('reviews_bp.list_reviews',
+                page=current_page-1,
+                user=user,
+                site=selected_site,
+                state=state,
+                fecha_rango=request.args.get('fecha_rango'),
+                rating=rating,
+                order=order
+                ) }}">
+            <i class="fas fa-chevron-left"></i>
+          </a>
+        </li>
+
+        {% for p in range(1, total+1) %}
+            {% if p == 1 or p == total or (p >= current_page-2 and p <= current_page+2) %}
+                <li class="page-item {% if p == current_page %}active{% endif %}">
+                  <a class="page-link" href="{{ url_for('reviews_bp.list_reviews',
+                    page=p,
+                    user=user,
+                    site=selected_site,
+                    state=state,
+                    fecha_rango=request.args.get('fecha_rango'),
+                    rating=rating,
+                    order=order) }}">{{ p }}</a>
+                </li>
+            {% elif p == current_page-3 or p == current_page+3 %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+
+        <li class="page-item {% if current_page >= total %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('reviews_bp.list_reviews',
+                    page=current_page+1,
+                    user=user,
+                    site=selected_site,
+                    state=state,
+                    fecha_rango=request.args.get('fecha_rango'),
+                    rating=rating,
+                    order=order
+                ) }}">
+            <i class="fas fa-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script>
+    flatpickr("#fecha_rango", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        locale: "es",
+        allowInput: true // Permite escribir manualmente si se desea
+    });
+    </script>
+{% endblock %}

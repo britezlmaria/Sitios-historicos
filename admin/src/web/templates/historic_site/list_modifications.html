@@ -1,0 +1,90 @@
+{% extends 'layout.html' %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <!--historial de modificaciones-->
+    <h1>Historial de modificaciones</h1>
+    <div class="mt-4">
+        <a href="{{ url_for('historic_site_bp.update', historic_site_id=historic_site.id) }}" class="btn btn-outline-secondary btn-sm mb-2">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a> 
+        <form method="get" action="{{ url_for('historic_site_bp.list_modifications', historic_site_id=historic_site.id) }}">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <input type="text" id="search_user_modification" name="search_user_modification" class="form-control" placeholder="Usuario" value="{{ search }}">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" id="date_range_modification" name="date_range_modification" class="form-control"
+                        placeholder="Seleccione un rango de fechas"
+                        value="{{ date_range }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="modification_type" class="form-select">
+                        <option value="">Todos los tipos</option>
+                        <option value="Creación" {% if request.args.get('modification_type') == 'Creación' %}selected{% endif %}>Creación</option>
+                        <option value="Edición" {% if request.args.get('modification_type') == 'Edición' %}selected{% endif %}>Edición</option>
+                        <option value="Eliminación" {% if request.args.get('modification_type') == 'Eliminación' %}selected{% endif %}>Eliminación</option>
+                        <option value="Cambio de estado" {% if request.args.get('modification_type') == 'Cambio de estado' %}selected{% endif %}>Cambio de estado</option>
+                        <option value="Cambio de tags" {% if request.args.get('modification_type') == 'Cambio de tags' %}selected{% endif %}>Cambio de tags</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex">
+                    <button class="btn btn-primary" type="submit">Buscar</button>
+                </div>
+                <div class="col-md-1 d-flex">
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.location='{{ url_for('historic_site_bp.list_modifications', historic_site_id=historic_site.id) }}'">Limpiar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="mt-4">
+        <div class="table-responsive">
+            <table class="table table-secondary table-hover" >
+                <thead>
+                    <tr class ="table-dark">
+                        <th>Usuario</th>
+                        <th>Fecha y hora de modificacion</th>
+                        <th>Tipo de modificacion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mod in modifications %}
+                        <tr>
+                            <td>{{ mod.user.email if mod.user else 'Desconocido' }}</td>
+                            <td>{{ mod.date_time.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                            <td>
+                                {% for type in mod.type %}
+                                    <span class="badge bg-secondary">{{ type.name }}</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 40px;">
+                                No hay modificaciones registradas para los filtros aplicados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if modifications.pages > 1 %}
+    <nav aria-label="Paginación">
+        <ul class="pagination justify-content-end">
+        <li class="page-item {% if not modifications.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('historic_site_bp.list_modifications', historic_site_id=historic_site.id, page=modifications.prev_num or 1) }}">«</a>
+        </li>
+        {% for p in range(1, modifications.pages + 1) %}
+        <li class="page-item {% if p == modifications.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('historic_site_bp.list_modifications', historic_site_id=historic_site.id, page=p) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item {% if not modifications.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('historic_site_bp.list_modifications', historic_site_id=historic_site.id, page=modifications.next_num or modifications.pages) }}">»</a>
+        </li>
+        </ul>
+    </nav>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,501 @@
+{% extends "layout.html" %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 350px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-top: 1em;
+            margin-bottom: 1em;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .error {
+            color: red;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .coordinates-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .coordinates-group > div {
+            flex: 1;
+        }
+        
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #f8f9fa;
+        }
+        
+        #imagePreview .col-md-6 {
+            cursor: move;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h4 mb-4">Crear Sitio Histórico</h1>
+
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+
+            <form action="{{ url_for('historic_site_bp.create') }}" method="post" enctype="multipart/form-data">
+                
+                <div class="mb-3">
+                    <label for="name" class="form-label">Nombre</label>
+                    <input type="text" id="name" name="name" class="form-control" value="{{ form.name if form else '' }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="short_description" class="form-label">Descripción corta</label>
+                    <input type="text" id="short_description" name="short_description" class="form-control" value="{{ form.short_description if form else '' }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Descripción completa</label>
+                    <textarea id="description" name="description" class="form-control" required>{{ form.description if form else '' }}</textarea>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="city" class="form-label">Ciudad</label>
+                        <input type="text" id="city" name="city" class="form-control" value="{{ form.city if form else '' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="province" class="form-label">Provincia</label>
+                        <input type="text" id="province" name="province" class="form-control" value="{{ form.province if form else '' }}" required>
+                    </div>
+                </div>
+
+                <input type="hidden" id="lat" name="lat" value="{{ form.lat if form else '' }}">
+                <input type="hidden" id="long" name="long" value="{{ form.long if form else '' }}">
+
+                <div class="my-3">
+                    <label class="form-label">Ubicación en el mapa</label>
+                    <div id="map" class="w-100 rounded border" style="height: 350px;"></div>
+                    <small class="text-muted">Haz clic en el mapa para establecer las coordenadas</small>
+                    <div id="coordError" class="text-danger mt-2" style="display:none;">
+                        Debes seleccionar una ubicación en el mapa.
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="state_of_conservation" class="form-label">Estado de conservación</label>
+                        <select id="state_of_conservation" name="state_of_conservation" class="form-select" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="bueno">Bueno</option>
+                            <option value="regular">Regular</option>
+                            <option value="malo">Malo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="inauguration_year" class="form-label">Año de inauguración</label>
+                        <input type="number" id="inauguration_year" name="inauguration_year" class="form-control" min="1500" max="2100" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="visible" class="form-label">Visible</label>
+                        <select id="visible" name="visible" class="form-select">
+                            <option value="on">Sí</option>
+                            <option value="off">No</option>
+                        </select>
+                    </div>
+                </div>
+
+                {% if categories %}
+                <div class="mt-4">
+                    <label class="form-label">Categorías</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for cat in categories %}
+                            <input class="btn-check" type="checkbox" id="cat{{ cat.id }}" name="categories" value="{{ cat.id }}">
+                            <label class="btn btn-sm btn-outline-primary rounded-pill" for="cat{{ cat.id }}">{{ cat.name }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if tags %}
+                <div class="mt-3">
+                    <label class="form-label">Etiquetas</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for tag in tags %}
+                            <input class="btn-check" type="checkbox" id="tag{{ tag.id }}" name="tags" value="{{ tag.id }}">
+                            <label class="btn btn-sm btn-outline-primary rounded-pill" for="tag{{ tag.id }}">{{ tag.name }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- SECCIÓN DE IMÁGENES  -->
+                <div class="mt-5">
+                    <div class="card border-primary shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-images me-2"></i>Imágenes (opcional)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="images" class="form-label">Seleccionar imágenes</label>
+                                <input type="file" 
+                                       name="images" 
+                                       id="images"
+                                       multiple 
+                                       accept="image/jpeg,image/png,image/webp" 
+                                       class="form-control">
+                                <small class="text-muted">
+                                    Máximo 10 imágenes · 5 MB cada una · JPG, PNG, WEBP
+                                    <br><i class="fas fa-hand-pointer me-1"></i>Arrastra las tarjetas para reordenar · 
+                                    La primera será la portada
+                                </small>
+                            </div>
+                            
+                            <!-- Vista previa con drag & drop -->
+                            <div id="imagePreview" class="row g-3 mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex align-items-center gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Crear Sitio Histórico
+                    </button>
+                    <a href="{{ url_for('historic_site_bp.list') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Cargar SortableJS desde CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+    // Mapa
+    var map = L.map('map').setView([-34.9214, -57.9544], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    var marker = null;
+
+    function updateCoordinates(lat, lng) {
+        document.getElementById('lat').value = lat.toFixed(6);
+        document.getElementById('long').value = lng.toFixed(6);
+    }
+
+    function addMarker(lat, lng) {
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng]).addTo(map);
+        }
+        updateCoordinates(lat, lng);
+    }
+
+    map.on('click', function(e) {
+        addMarker(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Validación de coordenadas
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function (e) {
+        const latInput = document.getElementById('lat');
+        const longInput = document.getElementById('long');
+        
+        const lat = parseFloat(latInput.value);
+        const lon = parseFloat(longInput.value);
+        
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+            e.preventDefault();
+            document.getElementById('coordError').style.display = 'block';
+            document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+        
+        document.getElementById('coordError').style.display = 'none';
+    });
+
+    // ========================================
+    // ✅ VISTA PREVIA DE IMÁGENES CON DRAG & DROP
+    // ========================================
+    let sortableInstance = null;
+    let coverIndex = 0; // Índice de la imagen portada
+
+    document.getElementById('images').addEventListener('change', function(e) {
+        const preview = document.getElementById('imagePreview');
+        preview.innerHTML = '';
+        
+        const files = Array.from(e.target.files);
+        
+        // Validar máximo 10 imágenes
+        if (files.length > 10) {
+            alert('Máximo 10 imágenes permitidas. Se seleccionarán las primeras 10.');
+            const dt = new DataTransfer();
+            files.slice(0, 10).forEach(f => dt.items.add(f));
+            e.target.files = dt.files;
+        }
+        
+        // Resetear portada
+        coverIndex = 0;
+        
+        Array.from(e.target.files).forEach((file, index) => {
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4';
+                col.dataset.fileIndex = index;
+                col.innerHTML = `
+                    <div class="card h-100 shadow-sm ${index === coverIndex ? 'border-success border-3' : ''}">
+                        <div class="position-relative">
+                            <img src="${event.target.result}" 
+                                 class="card-img-top" 
+                                 style="height: 220px; object-fit: cover; cursor: move;" 
+                                 alt="${file.name}">
+                            ${index === coverIndex ? '<span class="badge bg-success position-absolute top-0 start-0 m-2"><i class="fas fa-star me-1"></i>Portada</span>' : ''}
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title text-truncate mb-2" title="${file.name}">
+                                <i class="fas fa-image me-1"></i>${file.name.split('.')[0]}
+                            </h6>
+                            
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">
+                                    <i class="fas fa-heading me-1"></i>Título (obligatorio)
+                                </label>
+                                <input type="text" 
+                                       name="titles[]" 
+                                       class="form-control form-control-sm title-input" 
+                                       value="${file.name.split('.')[0]}" 
+                                       required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">
+                                    <i class="fas fa-align-left me-1"></i>Descripción (opcional)
+                                </label>
+                                <textarea name="descriptions[]" 
+                                          class="form-control form-control-sm description-input" 
+                                          rows="2" 
+                                          placeholder="Describe la imagen..."></textarea>
+                            </div>
+                            
+                            ${index === coverIndex ? `
+                                <span class="badge bg-success mb-2">
+                                    <i class="fas fa-star me-1"></i>Portada actual
+                                </span>
+                            ` : `
+                                <button type="button" class="btn btn-outline-primary btn-sm mb-2 set-cover-btn">
+                                    <i class="fas fa-star me-1"></i>Hacer portada
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+                preview.appendChild(col);
+                
+                //  Inicializar Sortable después de cargar la última imagen
+                if (index === e.target.files.length - 1) {
+                    setTimeout(() => {
+                        initSortable();
+                        attachCoverButtonEvents();
+                    }, 100);
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        });
+    });
+
+    //  Inicializar SortableJS
+    function initSortable() {
+        const preview = document.getElementById('imagePreview');
+        
+        if (sortableInstance) {
+            sortableInstance.destroy();
+        }
+        
+        if (preview && preview.children.length > 0) {
+            sortableInstance = new Sortable(preview, {
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                onEnd: function(evt) {
+                    console.log('📦 Imágenes reordenadas');
+                    updateImageOrder();
+                    showToast('Orden actualizado', 'success');
+                }
+            });
+            
+            console.log('✅ Sortable inicializado con', preview.children.length, 'imágenes');
+        }
+    }
+
+    //  Actualizar orden visual y reordenar archivos
+    function updateImageOrder() {
+        const preview = document.getElementById('imagePreview');
+        const cards = Array.from(preview.children);
+        
+        // Actualizar UI
+        cards.forEach((card, newIndex) => {
+            const cardElement = card.querySelector('.card');
+            const coverBadge = card.querySelector('.badge.bg-success');
+            const setCoverBtn = card.querySelector('.set-cover-btn');
+            const coverSpan = card.querySelector('span.badge.bg-success.mb-2');
+            
+            const isCover = newIndex === coverIndex;
+            
+            if (isCover) {
+                cardElement.classList.add('border-success', 'border-3');
+                
+                // Agregar badge en la imagen si no existe
+                if (!coverBadge) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-success position-absolute top-0 start-0 m-2';
+                    badge.innerHTML = '<i class="fas fa-star me-1"></i>Portada';
+                    card.querySelector('.position-relative').appendChild(badge);
+                }
+                
+                // Reemplazar botón por badge
+                if (setCoverBtn) {
+                    setCoverBtn.outerHTML = `
+                        <span class="badge bg-success mb-2">
+                            <i class="fas fa-star me-1"></i>Portada actual
+                        </span>
+                    `;
+                }
+            } else {
+                cardElement.classList.remove('border-success', 'border-3');
+                
+                if (coverBadge) {
+                    coverBadge.remove();
+                }
+                
+                // Reemplazar badge por botón
+                if (coverSpan && !setCoverBtn) {
+                    coverSpan.outerHTML = `
+                        <button type="button" class="btn btn-outline-primary btn-sm mb-2 set-cover-btn">
+                            <i class="fas fa-star me-1"></i>Hacer portada
+                        </button>
+                    `;
+                }
+            }
+        });
+        
+        // Reordenar archivos en el input
+        reorderFileInput();
+        
+        // Re-attachear eventos
+        attachCoverButtonEvents();
+    }
+
+    // ✅ Reordenar archivos en el input según el orden visual
+    function reorderFileInput() {
+        const preview = document.getElementById('imagePreview');
+        const cards = Array.from(preview.children);
+        const fileInput = document.getElementById('images');
+        const originalFiles = Array.from(fileInput.files);
+        
+        const dt = new DataTransfer();
+        cards.forEach(card => {
+            const originalIndex = parseInt(card.dataset.fileIndex);
+            dt.items.add(originalFiles[originalIndex]);
+        });
+        
+        fileInput.files = dt.files;
+        
+        console.log('✅ Archivos reordenados:', Array.from(fileInput.files).map(f => f.name));
+    }
+
+    // ✅ Eventos para botones "Hacer portada"
+    function attachCoverButtonEvents() {
+        document.querySelectorAll('.set-cover-btn').forEach((btn, index) => {
+            btn.replaceWith(btn.cloneNode(true)); // Remover listeners anteriores
+        });
+        
+        document.querySelectorAll('.set-cover-btn').forEach((btn) => {
+            btn.addEventListener('click', function() {
+                const card = this.closest('.col-md-6, .col-lg-4');
+                const allCards = Array.from(document.getElementById('imagePreview').children);
+                const newCoverIndex = allCards.indexOf(card);
+                
+                coverIndex = newCoverIndex;
+                updateImageOrder();
+                showToast('Portada actualizada', 'success');
+            });
+        });
+    }
+
+    // ✅ Mostrar toast de notificación
+    function showToast(message, type = 'success') {
+        const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+        
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed bottom-0 end-0 p-3';
+        toast.style.zIndex = '9999';
+        toast.innerHTML = `
+            <div class="toast show align-items-center text-white ${bgClass} border-0">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas ${icon} me-2"></i>${message}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), 2000);
+    }
+</script>
+{% endblock %}

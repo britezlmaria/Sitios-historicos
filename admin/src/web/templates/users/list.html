@@ -1,0 +1,150 @@
+{% extends 'layout.html' %}
+{% block head %}
+    {{ super() }}
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    .btn-actions .btn{
+            flex:1 1 auto;
+            white-space:nowrap;
+        }
+        .btn-actions .btn i {
+            margin-right: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container mt-4">
+        <h1 class="mb-4">Listado de Usuarios</h1>
+
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="{{ url_for('user_bp.list') }}" class="row g-2">
+                <div class="col-sm-6 col-md-3">
+                    <input type="text" name="email" placeholder="Buscar por email"
+                           value="{{ request.args.get('email', '') }}" class="form-control">
+                </div>
+                <div class="col-sm-6 col-md-2">
+                    <select name="enabled" class="form-select">
+                        <option value="">Activo (todos)</option>
+                        <option value="SI" {% if request.args.get('enabled') == "SI" %}selected{% endif %}>Sí</option>
+                        <option value="NO" {% if request.args.get('enabled') == "NO" %}selected{% endif %}>No</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <select name="role" class="form-select">
+                        <option value="">Todos los roles</option>
+                        {% for r in roles %}
+                            <option value="{{ r.name }}" {% if request.args.get('role') == r.name %}selected{% endif %}>{{ r.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-6 col-md-2">
+                    <select name="order_by_date" class="form-select">
+                        <option value="asc" {% if request.args.get('order_by_date') == "asc" %}selected{% endif %}>Fecha ↑</option>
+                        <option value="desc" {% if request.args.get('order_by_date') == "desc" %}selected{% endif %}>Fecha ↓</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+       <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Email</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Activo</th>
+                    <th>Rol</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if users %}
+                {% for u in users %}
+                    <tr>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.name }}</td>
+                        <td>{{ u.last_name }}</td>
+                        <td>
+                            {% if u.enabled %}
+                                <span class="badge bg-success">SI</span>
+                            {% else %}
+                                <span class="badge bg-danger">NO</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ u.role.name }}</td>
+                        <td class="text-center">
+                            <div class="d-grid gap-2 btn-actions">
+                                <a href="{{ url_for('user_bp.update', user_id=u.id) }}" class="btn btn-secondary">
+                                    <i class="fas fa-edit"></i> Editar
+                                </a>
+                                <button type="button"
+                                    class="btn btn-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#confirmModal"
+                                    data-action="{{ url_for('user_bp.delete', user_id=u.id) }}"
+                                    data-message="⚠️ ¿Seguro que queres eliminar al usuario {{ u.name }} {{ u.last_name }}?">
+                                        <i class="fas fa-trash-alt"></i> Eliminar
+                                </button>
+                                {% if u.enabled %}
+                                    <button type="button"
+                                            class="btn btn-warning"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#confirmModal"
+                                            data-action="{{ url_for('user_bp.block', user_id=u.id) }}"
+                                            data-message="¿Seguro que queres bloquear a {{ u.name }} {{ u.last_name }}?">
+                                        <i class="fas fa-ban"></i> Bloquear
+                                    </button>
+                                {% else %}
+                                    <button type="button"
+                                        class="btn btn-success"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#confirmModal"
+                                        data-action="{{ url_for('user_bp.unblock', user_id=u.id) }}"
+                                        data-message="¿Seguro que queres desbloquear a {{ u.name }} {{ u.last_name }}?">
+                                    <i class="fas fa-unlock"></i> Desbloquear
+                                </button>
+
+                                {% endif %}
+                                <a href="{{ url_for('user_bp.view_detail', user_id=u.id) }}" class="btn btn-info">
+                                <i class="fas fa-info-circle"></i> Detalle
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No se encontraron usuarios para mostrar.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+       <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center mt-3">
+        <a href="{{ url_for('user_bp.create') }}" class="btn btn-success mb-2 mb-sm-0">Crear nuevo usuario</a>
+        <div class="d-flex align-items-center">
+            {% if page > 1 %}
+                <a href="{{ url_for('user_bp.list', page=page-1, **request.args) }}" class="btn btn-outline-primary btn-sm me-2">Anterior</a>
+            {% endif %}
+            <span class="mx-2">Página {{ page }}</span>
+            {% if users|length == 25 %}
+                <a href="{{ url_for('user_bp.list', page=page+1, **request.args) }}" class="btn btn-outline-primary btn-sm ms-2">Siguiente</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

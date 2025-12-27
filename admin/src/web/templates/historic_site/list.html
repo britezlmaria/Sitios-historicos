@@ -1,0 +1,403 @@
+{% extends "layout.html" %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    
+    <style>
+        #map{
+            height: 350px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-top: 1em;
+        }
+        .btn-actions .btn{
+            flex:1 1 auto;
+            white-space:nowrap;
+        }
+        .btn-actions .btn i {
+            margin-right: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+        }
+        .tomselect.form-select,
+        .ts-wrapper {
+            min-width: 200px !important;
+            width: 200px !important;
+            display: inline-flex;
+            align-items: center;
+            box-sizing: border-box;
+        }
+        .ts-control {
+            width: 100% !important;
+            min-height: 36px !important;
+            height: 36px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            padding: 0 2rem 0 0.5rem !important;
+            box-sizing: border-box;
+        }
+        .ts-control input {
+            flex: 1 1 auto;
+            height: 100% !important;
+            line-height: 1.2;
+            vertical-align: middle;
+            color: inherit;
+        }
+        .ts-control .item {
+            max-width: calc(100% - 0.5rem);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .ts-dropdown {
+            font-size: 0.95rem;
+        }
+        .ts-wrapper.multi .ts-control {
+            flex-wrap: wrap;
+            padding: 4px 2rem 4px 0.5rem !important;
+            gap: 2px;
+            overflow-y: auto;              
+            overflow-x: hidden;
+            transition: all 0.2s ease;
+        }
+        .ts-wrapper.multi .ts-control .item {
+            background-color: #0d6efd;
+            color: #fff;
+            border-radius: 0.25rem;
+            padding: 2px 8px;
+            font-size: 0.85rem;
+            max-width: 100%;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row align-items-center g-3">
+        <div class="col-md-9">
+            <h1>Gestión de Sitios Históricos</h1>
+        </div>
+        </div>
+        <div class="row my-3">
+        <div class="col-12">
+            <form method="get" action="{{ url_for('historic_site_bp.list') }}" class="d-flex flex-wrap gap-2 justify-content-center align-items-end">
+                <input type="text" name="search" placeholder="Buscar sitio histórico..." class="form-control w-auto" value="{{ search }}">
+                <select id="city" name="city" class="form-select w-auto orden-btn">
+                    <option value="Todas" {% if city=='todas' %}selected{% endif %}>Todas las ciudades</option>
+                    {% for c in cities %}
+                        <option value="{{ c }}" {% if city==c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+                <select name="province" class="form-select w-auto orden-btn">
+                    <option value="Todas" {% if province=='todas' %}selected{% endif %}>Todas las provincias</option>
+                    {% for prov in provinces %}
+                        <option value="{{ prov }}" {% if province==prov %}selected{% endif %}>{{ prov }}</option>
+                    {% endfor %}
+                </select>
+                <select id="tags" name="tags" class="form-select w-auto orden-btn" multiple>
+                    {% for tag in all_tags %}
+                        <option value="{{ tag.id }}" {% if tag.id in selected_tags|map('int') %}selected{% endif %}>{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="state" class="form-select w-auto orden-btn">
+                    <option value="Todos" {% if state=='todos' %}selected{% endif %}>Todos los estados</option>
+                    <option value="bueno" {% if state=='Bueno' %}selected{% endif %}>Bueno</option>
+                    <option value="regular" {% if state=='Regular' %}selected{% endif %}>Regular</option>
+                    <option value="malo" {% if state=='Malo' %}selected{% endif %}>Malo</option>
+                </select>
+                <div class="btn-group" role="group" aria-label="Checkbox toggle button group">
+                    <input type="checkbox" class="btn-check" id="btncheck1" autocomplete="off" name="visible" value="1" {% if visible %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="btncheck1" id="visibleLabel">
+                        <span id="visibleIcon">{% if visible %}✅{% else %}❌{% endif %}</span> Solo visibles
+                    </label>
+                </div>
+                <div>
+                    <label for="fecha_rango" class="form-label mb-0">Fecha de registro:</label>
+                    <input type="text" id="fecha_rango" name="fecha_rango" class="form-control"
+                           placeholder="Selecciona un rango de fechas"
+                           value="{{ request.args.get('fecha_rango', '') }}">
+                </div>
+                <select name="order" class="form-select w-auto orden-btn">
+                    <option value="alfabetico_nombre" {% if order=='alfabetico_nombre' %}selected{% endif %}>A-Z por nombre</option>
+                    <option value="inverso_nombre" {% if order=='inverso_nombre' %}selected{% endif %}>Z-A por nombre</option>
+                    <option value="alfabetico_ciudad" {% if order=='alfabetico_ciudad' %}selected{% endif %}>A-Z por ciudad</option>
+                    <option value="inverso_ciudad" {% if order=='inverso_ciudad' %}selected{% endif %}>Z-A por ciudad</option>
+                    <option value="recientes" {% if order=='recientes' %}selected{% endif %}>Más recientes</option>
+                    <option value="antiguos" {% if order=='antiguos' %}selected{% endif %}>Más antiguos</option>
+                </select>
+                <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.location='{{ url_for('historic_site_bp.list') }}'">Limpiar</button>
+            </form>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <p class="text-muted">Cantidad de resultados: {{ historic_sites|length }}</p>
+        </div>
+        <div class="col-12 col-md-auto ms-md-auto d-grid d-md-flex justify-content-md-end gap-2 btn-actions">
+            <a href="{{ url_for('historic_site_bp.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i> Nuevo
+            </a>
+            {% if user and user.role.name == "Administrador" %}
+                <a href="{{ url_for('historic_site_bp.export_csv',
+                    search=search,
+                    city=city,
+                    province=province,
+                    tags=selected_tags,
+                    state=state,
+                    visible=visible|int,
+                    fecha_rango=fecha_rango,
+                    order=order) }}"
+                class="btn btn-success">
+                    <i class="fas fa-file-csv"></i> Exportar CSV
+                </a>
+            {% endif %}
+            <a href="{{ url_for('tags_bp.list_tags') }}" class="btn btn-secondary">
+                <i class= "fas fa-tags"></i> Etiquetas
+            </a>
+            <a href="{{ url_for('reviews_bp.list_reviews') }}" class="btn btn-warning">
+                <i class="fas fa-star"></i> Reseñas
+            </a>
+        </div>
+    </div>
+    
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="table-responsive">
+                <table class="table table-secondary table-hover">
+                    <thead>
+                        <tr class="table-dark">
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Ciudad</th>
+                            <th>Provincia</th>
+                            <th>Estado</th>
+                            <th>Año</th>
+                            <th>Categorías</th>
+                            <th>Etiquetas</th>
+                            <th>Visibilidad</th>
+                            <th>Portada</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for historic_site in historic_sites %}
+                            <tr>
+                                <td><strong>{{ historic_site.name }}</strong></td>
+                                <td>{{ historic_site.short_description }}</td>
+                                <td>{{ historic_site.city }}</td>
+                                <td>{{ historic_site.province }}</td>
+                                <td>{{ historic_site.state_of_conservation }}</td>
+                                <td>{{ historic_site.inauguration_year }}</td>
+                                <td>
+                                    {% if historic_site.category %}
+                                        {% if historic_site.category|length <= 3 %}
+                                            {% for category in historic_site.category %}
+                                                <span class="badge bg-secondary">{{ category.name }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="dropdown">
+                                                <button class="btn btn-secondary dropdown-toggle" type="button" 
+                                                        id="tagsDropdown{{ historic_site.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Ver categorías ({{ historic_site.category|length }})
+                                                </button>
+                                                <ul class="dropdown-menu" aria-labelledby="tagsDropdown{{ historic_site.id }}">
+                                                    {% for category in historic_site.category %}
+                                                        <li><span class="dropdown-item-text">
+                                                            <span class="badge bg-secondary">{{ category.name }}</span>
+                                                        </span></li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if historic_site.tags %}
+                                        {% if historic_site.tags|length <= 3 %}
+                                            {% for tag in historic_site.tags %}
+                                                <span class="badge bg-secondary">{{ tag.name }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="dropdown">
+                                                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" 
+                                                        id="tagsDropdown{{ historic_site.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Ver ({{ historic_site.tags|length }})
+                                                </button>
+                                                <ul class="dropdown-menu" aria-labelledby="tagsDropdown{{ historic_site.id }}">
+                                                    {% for tag in historic_site.tags %}
+                                                        <li><span class="dropdown-item-text">
+                                                            <span class="badge bg-secondary">{{ tag.name }}</span>
+                                                        </span></li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Sin etiquetas</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if historic_site.visible %}
+                                        <span class="badge bg-success">Visible</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No Visible</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if historic_site.cover_image %}
+                                        <img src="{{ historic_site.cover_image.url }}" 
+                                            alt="{{ historic_site.cover_image.title }}" 
+                                            class="img-thumbnail" 
+                                            style="width: 90px; height: 70px; object-fit: cover; border-radius: 6px;">
+                                    {% else %}
+                                        <span class="text-muted small">Sin imagen</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ url_for('historic_site_bp.update', historic_site_id=historic_site.id) }}" class="btn btn-secondary">
+                                            Editar
+                                        </a>
+                                        <form action="{{ url_for('historic_site_bp.delete', historic_site_id=historic_site.id) }}" method="POST" style="display: inline;">
+                                            <button type="button" class="btn btn-danger js-delete-btn" data-site-name="{{ historic_site.name }}">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="10" style="text-align: center; padding: 40px;">
+                                    No hay sitios históricos registrados.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+        {% if pagination.pages > 1 %}
+        <nav aria-label="Paginación">
+            <ul class="pagination justify-content-end">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('historic_site_bp.list', page=pagination.prev_num or 1) }}">«</a>
+            </li>
+            {% for p in range(1, pagination.pages + 1) %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('historic_site_bp.list', page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('historic_site_bp.list', page=pagination.next_num or pagination.pages) }}">»</a>
+            </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+    <div class="row">
+        <div class="col-12">
+            <div id="map"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        var map = L.map('map').setView([-34.9333, -57.95], 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var historic_sites = {{ historic_sites|tojson }};
+
+        historic_sites.forEach(function(site) {
+            if (site.lat && site.lon){
+            L.marker([site.lat, site.lon]).addTo(map)
+                .bindPopup('<b>' + site.name + '</b><br>' + site.short_description);
+            }
+        });
+    </script>
+    <script>
+        document.querySelectorAll('.js-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const form = btn.closest('form');
+            const siteName = btn.dataset.siteName || 'este sitio';
+            Swal.fire({
+                title: '¿Seguro que deseas eliminar?',
+                html: 'Vas a eliminar <b>' + siteName + '</b>.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true,
+                confirmButtonColor: '#d33'
+            }).then(res => { if (res.isConfirmed) form.submit(); });
+        });
+    });
+</script>
+<script>
+    // Checkbox 
+    document.addEventListener('DOMContentLoaded', function() {
+        var checkbox = document.getElementById('btncheck1');
+        var icon = document.getElementById('visibleIcon');
+        function updateIcon() {
+            icon.textContent = checkbox.checked ? '✅' : '❌';
+        }
+        checkbox.addEventListener('change', updateIcon);
+        updateIcon();
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+<script>
+    flatpickr("#fecha_rango", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        locale: "es"
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        new TomSelect("#city", {
+            create: false,            
+            sortField: { field: "text", direction: "asc" },
+            allowEmptyOption: true,
+            maxOptions: 200,
+            persist: false
+        });
+
+        new TomSelect("#tags", {
+            plugins: ['remove_button'],   
+            persist: false,
+            create: false,                 
+            maxItems: null,               
+            placeholder: 'Seleccionar tags...',
+            closeAfterSelect: false,      
+            render: {
+                item: function(data, escape) {
+                    return '<div class="badge bg-primary me-1">' + escape(data.text) + '</div>';
+                },
+                option: function(data, escape) {
+                    return '<div>' + escape(data.text) + '</div>';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

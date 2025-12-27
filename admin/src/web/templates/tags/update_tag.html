@@ -1,0 +1,24 @@
+{% extends 'layout.html' %}
+
+{% block title %}Actualizar Tags – Sitios Históricos{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <h2 class="mb-3"> Actualizar Etiqueta</h2>
+    <a href="{{ url_for('tags_bp.list_tags') }}" class="btn btn-secondary mb-3">← Volver al listado de tags</a>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="{{ url_for('tags_bp.update', id=tag.id) }}">
+        <input type="hidden" name="id" value="{{ tag.id }}">
+        <div class="mb-3">
+            <label for="name" class="form-label">Nombre nuevo para la etiqueta:</label>
+            <input type="text" class="form-control w-50" id="name" name="name" value="{{ tag.name }}" required>
+            <div class="form-text">Entre 3 y 50 caracteres. Los espacios se convertirán en guiones y se eliminarán acentos.
+        </div>
+        <button type="submit" class="btn btn-secondary">Actualizar etiqueta</button>
+    </form>
+</div>
+
+{% endblock %}
