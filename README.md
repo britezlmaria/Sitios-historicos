@@ -8,7 +8,7 @@ Proyecto desarrollado para el **Trabajo Integrador 2025** de la Facultad de Info
 * [Matheo Lamiral](https://github.com/MatheoLamiral/MatheoLamiral)
 * [Vicente Garcia Marti](https://github.com/Vicen621)
 * [Francisco Acosta](https://github.com/franciscoacosta31)
-* [Francisco Acosta]
+* Gonzalo Ramiro Irigoyen
 * [Maria Luisa Britez](https://github.com/britezlmaria/britezlmaria)
 
 ---
@@ -78,5 +78,6 @@ PostgreSQL (PostGIS): Localhost puerto 5433.
 pgAdmin: http://localhost:5050.
 
 MinIO Console: http://localhost:9001 (User/Pass: minioadmin).
+
 
 
