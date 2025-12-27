@@ -56,15 +56,16 @@ GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google/callback
 | alguno1@gmail.com | prueba_1 | admin |
 | test@gmail.com | testalgo | editor |
 
-
-##  Ejecución con Docker
-
-El proyecto utiliza Docker para levantar la infraestructura de forma rápida y consistente.
 En el .env de la carpeta portal
 ```properties
 VITE_API_BASE=http://localhost:5000
 
 ```
+
+##  Ejecución con Docker
+
+El proyecto utiliza Docker para levantar la infraestructura de forma rápida y consistente.
+
 
 ### Levantar Servicios
   ```bash
@@ -78,6 +79,7 @@ PostgreSQL (PostGIS): Localhost puerto 5433.
 pgAdmin: http://localhost:5050.
 
 MinIO Console: http://localhost:9001 (User/Pass: minioadmin).
+
 
 
 
